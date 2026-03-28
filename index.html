@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordFlow</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --color-gray:#f0f0f0;
+  --color-red:#ffcccc;
+  --color-yellow:#fff3cc;
+  --color-green:#ccf0d4;
+  --color-gray-dot:#bbb;
+  --color-red-dot:#e57373;
+  --color-yellow-dot:#ffca28;
+  --color-green-dot:#66bb6a;
+  --nav-h:52px;
+}
+body{font-family:system-ui,sans-serif;background:#fafafa;color:#222;min-height:100vh}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:#fff;border-bottom:1px solid #e8e8e8;display:flex;align-items:center;padding:0 20px;gap:16px;z-index:100}
+.nav-title{font-weight:700;font-size:1.1rem;letter-spacing:.5px;margin-right:auto}
+.mode-btn{padding:6px 16px;border-radius:20px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:.85rem;color:#555;transition:all .15s}
+.mode-btn.active{background:#222;color:#fff;border-color:#222}
+.progress{font-size:.8rem;color:#999;min-width:60px;text-align:right}
+
+/* MAIN */
+#app{padding-top:var(--nav-h);min-height:100vh}
+
+/* ── FLASHCARD MODE ── */
+#flashcard-view{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - var(--nav-h));padding:24px 16px}
+
+.card-wrap{perspective:1000px;width:100%;max-width:600px;height:340px;cursor:pointer}
+.card-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.4,0,.2,1)}
+.card-inner.flipped{transform:rotateY(180deg)}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:18px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08);transition:background .3s}
+.card-back{transform:rotateY(180deg);justify-content:flex-start;overflow:auto}
+
+.card-word{font-size:2.2rem;font-weight:700;text-align:center;line-height:1.3}
+.card-hint{font-size:.8rem;color:#aaa;margin-top:12px}
+.card-notes{font-size:.95rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;text-align:left;width:100%}
+.card-notes-empty{color:#bbb;font-style:italic}
+
+/* color dots */
+.color-dots{display:flex;gap:10px;margin-top:20px}
+.dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s}
+.dot:hover{transform:scale(1.2)}
+.dot.active{border-color:#333}
+.dot-gray{background:var(--color-gray-dot)}
+.dot-red{background:var(--color-red-dot)}
+.dot-yellow{background:var(--color-yellow-dot)}
+.dot-green{background:var(--color-green-dot)}
+
+/* bottom controls */
+.card-controls{display:flex;align-items:center;gap:16px;margin-top:28px}
+.ctrl-btn{padding:8px 22px;border-radius:20px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:.85rem;color:#444;transition:all .15s}
+.ctrl-btn:hover{background:#f0f0f0}
+.ctrl-btn.active{background:#222;color:#fff;border-color:#222}
+
+/* ── GALLERY MODE ── */
+#gallery-view{padding:16px}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center;padding:0 4px}
+.filter-btn{padding:5px 14px;border-radius:16px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:.82rem;color:#555;display:flex;align-items:center;gap:6px;transition:all .15s}
+.filter-btn.active{border-color:#333;background:#333;color:#fff}
+.filter-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.tile{border-radius:12px;padding:16px 12px;cursor:pointer;transition:transform .15s,box-shadow .15s;min-height:72px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:600;font-size:.9rem;word-break:break-word;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+.tile:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.12)}
+
+#loading{text-align:center;padding:60px;color:#aaa;font-size:1rem}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-title">WordFlow</span>
+  <button class="mode-btn active" id="btn-flash" onclick="setMode('flash')">卡片模式</button>
+  <button class="mode-btn" id="btn-gallery" onclick="setMode('gallery')">大厅模式</button>
+  <span class="progress" id="progress"></span>
+</nav>
+
+<div id="app">
+  <div id="loading">加载中...</div>
+
+  <div id="flashcard-view" style="display:none">
+    <div class="card-wrap" id="card-wrap">
+      <div class="card-inner" id="card-inner" onclick="flipCard()">
+        <div class="card-face" id="card-front">
+          <div class="card-word" id="card-word"></div>
+          <div class="card-hint">点击查看笔记</div>
+        </div>
+        <div class="card-face card-back" id="card-back">
+          <div class="card-notes" id="card-notes"></div>
+        </div>
+      </div>
+    </div>
+    <div class="color-dots">
+      <div class="dot dot-gray" id="dot-gray" onclick="markColor('gray')" title="未标记"></div>
+      <div class="dot dot-red" id="dot-red" onclick="markColor('red')" title="不会"></div>
+      <div class="dot dot-yellow" id="dot-yellow" onclick="markColor('yellow')" title="模糊"></div>
+      <div class="dot dot-green" id="dot-green" onclick="markColor('green')" title="掌握"></div>
+    </div>
+    <div class="card-controls">
+      <button class="ctrl-btn" onclick="prevCard()">← 上一张</button>
+      <button class="ctrl-btn" id="btn-shuffle" onclick="toggleShuffle()">随机</button>
+      <button class="ctrl-btn" onclick="nextCard()">下一张 →</button>
+    </div>
+  </div>
+
+  <div id="gallery-view" style="display:none">
+    <div class="filter-bar" id="filter-bar"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'wordflow_colors';
+const COLOR_MAP = {
+  gray:   { bg: 'var(--color-gray)',   dot: 'var(--color-gray-dot)' },
+  red:    { bg: 'var(--color-red)',    dot: 'var(--color-red-dot)' },
+  yellow: { bg: 'var(--color-yellow)', dot: 'var(--color-yellow-dot)' },
+  green:  { bg: 'var(--color-green)',  dot: 'var(--color-green-dot)' },
+};
+
+let words = [];
+let colors = {};
+let indices = [];
+let currentPos = 0;
+let isFlipped = false;
+let shuffled = false;
+let mode = 'flash';
+let galleryFilter = 'all';
+
+// ── CSV PARSER (RFC 4180) ──
+function parseCSV(text) {
+  const rows = [];
+  let i = 0;
+  const len = text.length;
+  while (i < len) {
+    const row = [];
+    while (i < len) {
+      if (text[i] === '"') {
+        i++;
+        let field = '';
+        while (i < len) {
+          if (text[i] === '"') {
+            if (text[i+1] === '"') { field += '"'; i += 2; }
+            else { i++; break; }
+          } else {
+            field += text[i++];
+          }
+        }
+        row.push(field);
+      } else {
+        let field = '';
+        while (i < len && text[i] !== ',' && text[i] !== '\n' && text[i] !== '\r') {
+          field += text[i++];
+        }
+        row.push(field);
+      }
+      if (i < len && text[i] === ',') { i++; continue; }
+      break;
+    }
+    if (i < len && text[i] === '\r') i++;
+    if (i < len && text[i] === '\n') i++;
+    if (row.length > 0 && !(row.length === 1 && row[0] === '')) rows.push(row);
+  }
+  return rows;
+}
+
+function stripHtml(str) {
+  const div = document.createElement('div');
+  div.innerHTML = str;
+  return (div.textContent || div.innerText || '').trim();
+}
+
+function loadColors() {
+  try { colors = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+  catch(e) { colors = {}; }
+}
+
+function saveColors() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(colors));
+}
+
+function getColor(word) {
+  return colors[word] || 'gray';
+}
+
+// ── INIT ──
+async function init() {
+  loadColors();
+  // support both local file and GitHub Pages
+  const base = location.pathname.endsWith('/') ? location.pathname : location.pathname.replace(/\/[^/]*$/, '/');
+  const csvUrl = base + 'data/words.csv';
+  let csvText;
+  try {
+    const res = await fetch(csvUrl);
+    if (!res.ok) throw new Error('fetch failed');
+    csvText = await res.text();
+  } catch(e) {
+    document.getElementById('loading').textContent = '无法加载 data/words.csv，请通过 HTTP 服务器打开此页面。';
+    return;
+  }
+  const rows = parseCSV(csvText);
+  // skip header row
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const word = (row[0] || '').trim();
+    if (!word) continue;
+    const notes = stripHtml((row[1] || '').trim());
+    words.push({ word, notes });
+  }
+  if (words.length === 0) {
+    document.getElementById('loading').textContent = '没有找到单词数据。';
+    return;
+  }
+  resetIndices();
+  document.getElementById('loading').style.display = 'none';
+  setMode('flash');
+}
+
+function resetIndices() {
+  indices = words.map((_, i) => i);
+  if (shuffled) shuffle(indices);
+  currentPos = 0;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// ── MODE SWITCHING ──
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-flash').classList.toggle('active', m === 'flash');
+  document.getElementById('btn-gallery').classList.toggle('active', m === 'gallery');
+  document.getElementById('flashcard-view').style.display = m === 'flash' ? 'flex' : 'none';
+  document.getElementById('gallery-view').style.display = m === 'gallery' ? 'block' : 'none';
+  document.getElementById('progress').textContent = m === 'flash' ? (currentPos + 1) + ' / ' + indices.length : '';
+  if (m === 'flash') renderCard();
+  else renderGallery();
+}
+
+// ── FLASHCARD ──
+function renderCard() {
+  if (!words.length) return;
+  const idx = indices[currentPos];
+  const w = words[idx];
+  const c = getColor(w.word);
+  const front = document.getElementById('card-front');
+  const back = document.getElementById('card-back');
+  const bg = COLOR_MAP[c].bg;
+  front.style.background = bg;
+  back.style.background = bg;
+  document.getElementById('card-word').textContent = w.word;
+  const notesEl = document.getElementById('card-notes');
+  if (w.notes) {
+    notesEl.textContent = w.notes;
+    notesEl.classList.remove('card-notes-empty');
+  } else {
+    notesEl.textContent = '（暂无笔记）';
+    notesEl.classList.add('card-notes-empty');
+  }
+  // reset flip
+  isFlipped = false;
+  document.getElementById('card-inner').classList.remove('flipped');
+  // update dots
+  ['gray','red','yellow','green'].forEach(col => {
+    document.getElementById('dot-' + col).classList.toggle('active', col === c);
+  });
+  document.getElementById('progress').textContent = (currentPos + 1) + ' / ' + indices.length;
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('card-inner').classList.toggle('flipped', isFlipped);
+}
+
+function prevCard() {
+  if (currentPos > 0) currentPos--;
+  else currentPos = indices.length - 1;
+  renderCard();
+}
+
+function nextCard() {
+  if (currentPos < indices.length - 1) currentPos++;
+  else currentPos = 0;
+  renderCard();
+}
+
+function markColor(color) {
+  const word = words[indices[currentPos]].word;
+  colors[word] = color;
+  saveColors();
+  renderCard();
+}
+
+function toggleShuffle() {
+  shuffled = !shuffled;
+  document.getElementById('btn-shuffle').classList.toggle('active', shuffled);
+  resetIndices();
+  renderCard();
+}
+
+// ── GALLERY ──
+function renderGallery() {
+  const bar = document.getElementById('filter-bar');
+  const grid = document.getElementById('grid');
+
+  // filter buttons
+  const filters = [
+    { key: 'all', label: '全部', dotColor: '#ccc' },
+    { key: 'gray', label: '未标记', dotColor: 'var(--color-gray-dot)' },
+    { key: 'red', label: '不会', dotColor: 'var(--color-red-dot)' },
+    { key: 'yellow', label: '模糊', dotColor: 'var(--color-yellow-dot)' },
+    { key: 'green', label: '掌握', dotColor: 'var(--color-green-dot)' },
+  ];
+  bar.innerHTML = filters.map(f =>
+    `<button class="filter-btn ${galleryFilter === f.key ? 'active' : ''}" onclick="setFilter('${f.key}')">
+      <span class="filter-dot" style="background:${f.dotColor}"></span>${f.label}
+    </button>`
+  ).join('');
+
+  // tiles
+  const filtered = words.filter((w, i) => {
+    if (galleryFilter === 'all') return true;
+    return getColor(w.word) === galleryFilter;
+  });
+
+  grid.innerHTML = filtered.map(w => {
+    const c = getColor(w.word);
+    const bg = COLOR_MAP[c].bg;
+    const realIdx = words.indexOf(w);
+    return `<div class="tile" style="background:${bg}" onclick="openCard(${realIdx})">${escHtml(w.word)}</div>`;
+  }).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setFilter(f) {
+  galleryFilter = f;
+  renderGallery();
+}
+
+function openCard(realIdx) {
+  // find position in indices
+  const pos = indices.indexOf(realIdx);
+  if (pos !== -1) currentPos = pos;
+  else {
+    // not in current indices (shuffle mode) — jump anyway
+    currentPos = 0;
+    for (let i = 0; i < indices.length; i++) {
+      if (indices[i] === realIdx) { currentPos = i; break; }
+    }
+  }
+  setMode('flash');
+}
+
+// ── KEYBOARD ──
+document.addEventListener('keydown', e => {
+  if (mode !== 'flash') return;
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); prevCard(); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); nextCard(); }
+  if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); flipCard(); }
+});
+
+init();
+</script>
+</body>
+</html>
