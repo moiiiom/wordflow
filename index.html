@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>WordFlow</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -17,22 +17,25 @@
   --color-green-dot:#66bb6a;
   --nav-h:52px;
 }
-body{font-family:system-ui,sans-serif;background:#fafafa;color:#222;min-height:100vh}
+html,body{height:100%;overflow:hidden}
+body{font-family:system-ui,sans-serif;background:#fafafa;color:#222}
 
 /* NAV */
-nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:#fff;border-bottom:1px solid #e8e8e8;display:flex;align-items:center;padding:0 20px;gap:16px;z-index:100}
+nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:#fff;border-bottom:1px solid #e8e8e8;display:flex;align-items:center;padding:0 14px;gap:10px;z-index:100}
 .nav-title{font-weight:700;font-size:1.1rem;letter-spacing:.5px;margin-right:auto}
-.mode-btn{padding:6px 16px;border-radius:20px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:.85rem;color:#555;transition:all .15s}
+.mode-btn{padding:6px 14px;border-radius:20px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:.82rem;color:#555;transition:all .15s;white-space:nowrap}
 .mode-btn.active{background:#222;color:#fff;border-color:#222}
-.progress{font-size:.8rem;color:#999;min-width:60px;text-align:right}
+.progress{font-size:.78rem;color:#999;min-width:52px;text-align:right;white-space:nowrap}
 
 /* MAIN */
-#app{padding-top:var(--nav-h);min-height:100vh}
+#app{position:fixed;top:var(--nav-h);left:0;right:0;bottom:0;overflow:hidden}
 
 /* ── FLASHCARD MODE ── */
-#flashcard-view{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - var(--nav-h));padding:24px 16px}
+#flashcard-view{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:20px 16px}
 
-.card-wrap{perspective:1000px;width:100%;max-width:600px;height:340px;cursor:pointer}
+.card-wrap{perspective:1000px;width:100%;max-width:600px;height:320px;cursor:pointer;flex-shrink:0}
+@media(max-height:580px){.card-wrap{height:200px}}
+@media(max-width:400px){.card-word{font-size:1.6rem}}
 .card-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.4,0,.2,1)}
 .card-inner.flipped{transform:rotateY(180deg)}
 .card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:18px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08);transition:background .3s}
@@ -44,7 +47,7 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:#fff;bord
 .card-notes-empty{color:#bbb;font-style:italic}
 
 /* color dots */
-.color-dots{display:flex;gap:10px;margin-top:20px}
+.color-dots{display:flex;gap:14px;margin-top:18px;flex-shrink:0}
 .dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s}
 .dot:hover{transform:scale(1.2)}
 .dot.active{border-color:#333}
@@ -54,13 +57,13 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:#fff;bord
 .dot-green{background:var(--color-green-dot)}
 
 /* bottom controls */
-.card-controls{display:flex;align-items:center;gap:16px;margin-top:28px}
+.card-controls{display:flex;align-items:center;gap:10px;margin-top:18px;flex-shrink:0;flex-wrap:wrap;justify-content:center}
 .ctrl-btn{padding:8px 22px;border-radius:20px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:.85rem;color:#444;transition:all .15s}
 .ctrl-btn:hover{background:#f0f0f0}
 .ctrl-btn.active{background:#222;color:#fff;border-color:#222}
 
 /* ── GALLERY MODE ── */
-#gallery-view{padding:16px}
+#gallery-view{padding:12px;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center;padding:0 4px}
 .filter-btn{padding:5px 14px;border-radius:16px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:.82rem;color:#555;display:flex;align-items:center;gap:6px;transition:all .15s}
 .filter-btn.active{border-color:#333;background:#333;color:#fff}
@@ -75,20 +78,20 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:#fff;bord
 <body>
 <nav>
   <span class="nav-title">WordFlow</span>
-  <button class="mode-btn active" id="btn-flash" onclick="setMode('flash')">卡片模式</button>
-  <button class="mode-btn" id="btn-gallery" onclick="setMode('gallery')">大厅模式</button>
+  <button class="mode-btn active" id="btn-flash" onclick="setMode('flash')">Flashcard</button>
+  <button class="mode-btn" id="btn-gallery" onclick="setMode('gallery')">Gallery</button>
   <span class="progress" id="progress"></span>
 </nav>
 
 <div id="app">
-  <div id="loading">加载中...</div>
+  <div id="loading">Loading...</div>
 
   <div id="flashcard-view" style="display:none">
     <div class="card-wrap" id="card-wrap">
       <div class="card-inner" id="card-inner" onclick="flipCard()">
         <div class="card-face" id="card-front">
           <div class="card-word" id="card-word"></div>
-          <div class="card-hint">点击查看笔记</div>
+          <div class="card-hint">Tap to see notes</div>
         </div>
         <div class="card-face card-back" id="card-back">
           <div class="card-notes" id="card-notes"></div>
@@ -96,15 +99,16 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:#fff;bord
       </div>
     </div>
     <div class="color-dots">
-      <div class="dot dot-gray" id="dot-gray" onclick="markColor('gray')" title="未标记"></div>
-      <div class="dot dot-red" id="dot-red" onclick="markColor('red')" title="不会"></div>
-      <div class="dot dot-yellow" id="dot-yellow" onclick="markColor('yellow')" title="模糊"></div>
-      <div class="dot dot-green" id="dot-green" onclick="markColor('green')" title="掌握"></div>
+      <div class="dot dot-gray" id="dot-gray" onclick="markColor('gray')" title="Unmarked"></div>
+      <div class="dot dot-red" id="dot-red" onclick="markColor('red')" title="Hard"></div>
+      <div class="dot dot-yellow" id="dot-yellow" onclick="markColor('yellow')" title="Fuzzy"></div>
+      <div class="dot dot-green" id="dot-green" onclick="markColor('green')" title="Mastered"></div>
     </div>
     <div class="card-controls">
-      <button class="ctrl-btn" onclick="prevCard()">← 上一张</button>
-      <button class="ctrl-btn" id="btn-shuffle" onclick="toggleShuffle()">随机</button>
-      <button class="ctrl-btn" onclick="nextCard()">下一张 →</button>
+      <button class="ctrl-btn" onclick="prevCard()">← Prev</button>
+      <button class="ctrl-btn" id="btn-shuffle" onclick="toggleShuffle()">Shuffle</button>
+      <button class="ctrl-btn" id="btn-auto" onclick="toggleAuto()">Auto</button>
+      <button class="ctrl-btn" onclick="nextCard()">Next →</button>
     </div>
   </div>
 
@@ -200,7 +204,7 @@ async function init() {
     if (!res.ok) throw new Error('fetch failed');
     csvText = await res.text();
   } catch(e) {
-    document.getElementById('loading').textContent = '无法加载 data/words.csv，请通过 HTTP 服务器打开此页面。';
+    document.getElementById('loading').textContent = 'Failed to load data/words.csv. Please serve via HTTP server.';
     return;
   }
   const rows = parseCSV(csvText);
@@ -213,7 +217,7 @@ async function init() {
     words.push({ word, notes });
   }
   if (words.length === 0) {
-    document.getElementById('loading').textContent = '没有找到单词数据。';
+    document.getElementById('loading').textContent = 'No words found in data/words.csv.';
     return;
   }
   resetIndices();
@@ -236,6 +240,7 @@ function shuffle(arr) {
 
 // ── MODE SWITCHING ──
 function setMode(m) {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; document.getElementById('btn-auto').classList.remove('active'); }
   mode = m;
   document.getElementById('btn-flash').classList.toggle('active', m === 'flash');
   document.getElementById('btn-gallery').classList.toggle('active', m === 'gallery');
@@ -300,6 +305,19 @@ function markColor(color) {
   renderCard();
 }
 
+let autoTimer = null;
+
+function toggleAuto() {
+  if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    document.getElementById('btn-auto').classList.remove('active');
+  } else {
+    autoTimer = setInterval(() => nextCard(), 3000);
+    document.getElementById('btn-auto').classList.add('active');
+  }
+}
+
 function toggleShuffle() {
   shuffled = !shuffled;
   document.getElementById('btn-shuffle').classList.toggle('active', shuffled);
@@ -314,11 +332,11 @@ function renderGallery() {
 
   // filter buttons
   const filters = [
-    { key: 'all', label: '全部', dotColor: '#ccc' },
-    { key: 'gray', label: '未标记', dotColor: 'var(--color-gray-dot)' },
-    { key: 'red', label: '不会', dotColor: 'var(--color-red-dot)' },
-    { key: 'yellow', label: '模糊', dotColor: 'var(--color-yellow-dot)' },
-    { key: 'green', label: '掌握', dotColor: 'var(--color-green-dot)' },
+    { key: 'all', label: 'All', dotColor: '#ccc' },
+    { key: 'gray', label: 'Unmarked', dotColor: 'var(--color-gray-dot)' },
+    { key: 'red', label: 'Hard', dotColor: 'var(--color-red-dot)' },
+    { key: 'yellow', label: 'Fuzzy', dotColor: 'var(--color-yellow-dot)' },
+    { key: 'green', label: 'Mastered', dotColor: 'var(--color-green-dot)' },
   ];
   bar.innerHTML = filters.map(f =>
     `<button class="filter-btn ${galleryFilter === f.key ? 'active' : ''}" onclick="setFilter('${f.key}')">
@@ -370,6 +388,24 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') { e.preventDefault(); nextCard(); }
   if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); flipCard(); }
 });
+
+// ── SWIPE ──
+(function() {
+  let tx = 0, ty = 0;
+  const el = document.getElementById('app');
+  el.addEventListener('touchstart', e => {
+    tx = e.touches[0].clientX;
+    ty = e.touches[0].clientY;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (mode !== 'flash') return;
+    const dx = e.changedTouches[0].clientX - tx;
+    const dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) nextCard(); else prevCard();
+    }
+  }, { passive: true });
+})();
 
 init();
 </script>
