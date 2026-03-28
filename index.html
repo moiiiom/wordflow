@@ -41,6 +41,7 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:#fff;bord
 .card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:18px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08);transition:background .3s}
 .card-back{transform:rotateY(180deg);justify-content:flex-start;overflow:auto}
 
+.card-importance{font-size:.85rem;color:#f5a623;letter-spacing:2px;margin-bottom:8px;min-height:1.2em}
 .card-word{font-size:2.2rem;font-weight:700;text-align:center;line-height:1.3}
 .card-hint{font-size:.8rem;color:#aaa;margin-top:12px}
 .card-notes{font-size:.95rem;line-height:1.7;white-space:pre-wrap;word-break:break-word;text-align:left;width:100%}
@@ -90,6 +91,7 @@ nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:#fff;bord
     <div class="card-wrap" id="card-wrap">
       <div class="card-inner" id="card-inner" onclick="flipCard()">
         <div class="card-face" id="card-front">
+          <div class="card-importance" id="card-importance"></div>
           <div class="card-word" id="card-word"></div>
           <div class="card-hint">Tap to see notes</div>
         </div>
@@ -214,7 +216,8 @@ async function init() {
     const word = (row[0] || '').trim();
     if (!word) continue;
     const notes = stripHtml((row[1] || '').trim());
-    words.push({ word, notes });
+    const importance = (row[2] || '').trim();
+    words.push({ word, notes, importance });
   }
   if (words.length === 0) {
     document.getElementById('loading').textContent = 'No words found in data/words.csv.';
@@ -263,12 +266,14 @@ function renderCard() {
   front.style.background = bg;
   back.style.background = bg;
   document.getElementById('card-word').textContent = w.word;
+  const imp = parseInt(w.importance) || 0;
+  document.getElementById('card-importance').textContent = imp ? '★'.repeat(imp) + '☆'.repeat(5 - imp) : '';
   const notesEl = document.getElementById('card-notes');
   if (w.notes) {
     notesEl.textContent = w.notes;
     notesEl.classList.remove('card-notes-empty');
   } else {
-    notesEl.textContent = '（暂无笔记）';
+    notesEl.textContent = '(no notes)';
     notesEl.classList.add('card-notes-empty');
   }
   // reset flip
